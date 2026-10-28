@@ -112,13 +112,14 @@ Pine Script menghasilkan level SL dan TP berdasarkan ATR. Sesuaikan parameter st
 | Martingale / grid | Dinonaktifkan |
 
 Pengaturan ini merupakan nilai awal untuk pengujian teknis, bukan nasihat keuangan dan bukan jaminan bahwa sistem akan menghasilkan keuntungan atau terhindar dari kerugian.
+
 ---
 
 ## 📄 License
 
 Proyek ini dirilis di bawah lisensi **MIT** — bebas digunakan, dimodifikasi, dan didistribusikan, dengan tetap menyertakan copyright notice. Lihat file [LICENSE](LICENSE) untuk teks lengkap.
 
-**Disclaimer**: Software ini disediakan **\"AS IS\"**, tanpa jaminan apa pun. Trading forex/komoditas memiliki risiko kehilangan modal. Anda bertanggung jawab penuh atas penggunaan software ini. **Bukan nasihat finansial.**
+**Disclaimer**: Software ini disediakan **"AS IS"**, tanpa jaminan apa pun. Trading forex/komoditas memiliki risiko kehilangan modal. Anda bertanggung jawab penuh atas penggunaan software ini. **Bukan nasihat finansial.**
 
 ---
 
@@ -127,54 +128,10 @@ Proyek ini dirilis di bawah lisensi **MIT** — bebas digunakan, dimodifikasi, d
 Jika proyek ini bermanfaat, dukung pengembangan Black Cube ScannerFX melalui donasi sukarela.
 
 <p align="center">
-  <img
-    src=\"qris-donasi.jpg\"
-    width=\"300\"
-    alt=\"QRIS Donasi Black Cube Code\"
-  >
+  <img src="qris-donasi.jpg" width="300" alt="QRIS Donasi Black Cube Code">
 </p>
-
-<p align=\"center\">
-  <em>Terima kasih atas dukungan Anda untuk pengembangan software independen.</em>
-</p>
-
----
-
-## 📞 Kontak Developer
-
-**BLACK CUBE CODE**
-
-*Independent Developer — Expert Advisor and Algorithmic Trading*
-
-- **Telegram:** [@blackcubecodeadmin](https://t.me/blackcubecodeadmin)
-- **GitHub Repository:** [BlackCubeScannerFX](https://github.com/blackcubecode/BlackCubeScannerFX)
-- **GitHub Issues:** [Laporkan Bug atau Ajukan Fitur](https://github.com/blackcubecode/BlackCubeScannerFX/issues)
-
----
-
----
-
-## 📄 License
-
-Proyek ini dirilis di bawah lisensi **MIT** — bebas digunakan, dimodifikasi, dan didistribusikan, dengan tetap menyertakan copyright notice. Lihat file [LICENSE](LICENSE) untuk teks lengkap.
-
-**Disclaimer**: Software ini disediakan **\"AS IS\"**, tanpa jaminan apa pun. Trading forex/komoditas memiliki risiko kehilangan modal. Anda bertanggung jawab penuh atas penggunaan software ini. **Bukan nasihat finansial.**
-
----
-
-## 💖 Support dan Donasi
-
-Jika proyek ini bermanfaat, dukung pengembangan Black Cube ScannerFX melalui donasi sukarela.
 
 <p align="center">
-  <img
-    src=\"qris-donasi.jpg\"
-    width=\"300\"
-    alt=\"QRIS Donasi Black Cube Code\"
-  >
-</p>
-
-<p align=\"center\">
   <em>Terima kasih atas dukungan Anda untuk pengembangan software independen.</em>
 </p>
 
