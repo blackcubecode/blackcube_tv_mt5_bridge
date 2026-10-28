@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+env/
+ENV/
+
+# Environment
+.env
+.env.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Data & runtime
+*.tmp
+*.bak
+inbox/
+processed/
+rejected/
+processed_ids/
+
+# Compiled MQL5
+*.ex5
+*.ex4
+
+# Secrets / private
+*.pem
+*.key
+secret*

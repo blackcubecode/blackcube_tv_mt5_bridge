@@ -1,0 +1,169 @@
+//@version=5
+indicator("BlackCube XAUUSD Breakout Alerts v2", overlay=true)
+// ============================================================================
+// BlackCube XAUUSD Breakout Alerts v2
+// ----------------------------------------------------------------------------
+// Signal generator untuk bridge Python (bridge.py) -> EA MT5.
+//
+// Perubahan dari v1:
+//  - Filter tren (EMA), filter sesi, filter ATR minimum
+//  - Konfirmasi volume opsional
+//  - Anti-duplikat berbasis bar_index (1 alert per bar per arah)
+//  - Jarak SL/TP dalam ticks, konsisten dengan batas bridge
+//  - Payload JSON ringkas & ter-escape dengan aman
+//  - Panel status di chart (tren, ATR, sesi, sinyal terakhir)
+//  - Format harga mengikuti syminfo.mintick
+//  - Deteksi konflik SL/TP vs MAX_SL_DISTANCE / MAX_TP_DISTANCE bridge
+// ============================================================================
+
+// --------------------------- INPUT: Strategi ---------------------------------
+grpStrat = "Strategi"
+lookback  = input.int(20, "Breakout lookback", minval=2, group=grpStrat)
+atrLen    = input.int(14, "ATR length", minval=1, group=grpStrat)
+slAtr     = input.float(1.5, "SL ATR multiple", minval=0.1, step=0.1, group=grpStrat)
+tpAtr     = input.float(2.0, "TP ATR multiple", minval=0.1, step=0.1, group=grpStrat)
+minAtrPts = input.float(0.0, "Min ATR (price units, 0 = nonaktif)", minval=0.0, step=0.1, group=grpStrat,
+     tooltip="Tolak sinyal jika ATR di bawah nilai ini. Berguna saat pasar sangat sepi.")
+
+// --------------------------- INPUT: Filter -----------------------------------
+grpFilter = "Filter"
+useEmaFilter   = input.bool(true,  "Filter EMA tren", group=grpFilter)
+emaLen         = input.int(50, "EMA length", minval=2, group=grpFilter)
+useVolume      = input.bool(false, "Konfirmasi volume", group=grpFilter)
+volLen         = input.int(20, "Volume MA length", minval=1, group=grpFilter)
+volMult        = input.float(1.2, "Volume multiplier", minval=0.1, step=0.1, group=grpFilter)
+
+useSession     = input.bool(false, "Batasi sesi", group=grpFilter)
+sessionStr     = input.session("0700-2000", "Sesi (exchange time)", group=grpFilter,
+     tooltip="Format HHMM-HHMM, waktu exchange chart. Kosongkan filter jika tidak yakin.")
+
+// --------------------------- INPUT: Batas bridge -----------------------------
+grpBridge = "Batas Bridge"
+maxSlDist = input.float(100.0, "MAX_SL_DISTANCE (price units)", minval=0.1, group=grpBridge,
+     tooltip="Samakan dengan env BC_MAX_SL_DISTANCE di bridge.py")
+maxTpDist = input.float(200.0, "MAX_TP_DISTANCE (price units)", minval=0.1, group=grpBridge,
+     tooltip="Samakan dengan env BC_MAX_TP_DISTANCE di bridge.py")
+maxAgeSec = input.int(180, "MAX_AGE_SECONDS", minval=10, group=grpBridge,
+     tooltip="Samakan dengan env BC_MAX_AGE_SECONDS. Alert yang lebih tua akan ditolak bridge.")
+
+// --------------------------- INPUT: Output -----------------------------------
+grpOut = "Output"
+sendBuy   = input.bool(true, "Enable BUY alerts",  group=grpOut)
+sendSell  = input.bool(true, "Enable SELL alerts", group=grpOut)
+symName   = input.string("XAUUSD", "Symbol di payload (harus ada di BC_ALLOWED_SYMBOLS)", group=grpOut)
+showPanel = input.bool(true, "Tampilkan panel status", group=grpOut)
+
+// --------------------------- PERHITUNGAN -------------------------------------
+atr        = ta.atr(atrLen)
+ema        = ta.ema(close, emaLen)
+volMa      = ta.sma(volume, volLen)
+priorHigh  = ta.highest(high, lookback)[1]
+priorLow   = ta.lowest(low, lookback)[1]
+
+// Sesi
+inSession = not useSession or not na(time(timeframe.period, sessionStr))
+
+// Filter tren
+trendUp   = not useEmaFilter or close > ema
+trendDown = not useEmaFilter or close < ema
+
+// Filter volume
+volOk = not useVolume or volume > volMa * volMult
+
+// Filter ATR
+atrOk = minAtrPts <= 0 or atr >= minAtrPts
+
+// Sinyal mentah
+rawBuy  = sendBuy  and barstate.isconfirmed and close > priorHigh
+rawSell = sendSell and barstate.isconfirmed and close < priorLow
+
+// Sinyal final (dengan semua filter)
+buySignal  = rawBuy  and trendUp   and volOk and atrOk and inSession and atr > 0
+sellSignal = rawSell and trendDown and volOk and atrOk and inSession and atr > 0
+
+// --------------------------- HELPER: format & escape -------------------------
+// Format harga sesuai tick size chart (mis. XAUUSD 2 desimal).
+fmtPrice(float p) => str.tostring(p, format.mintick)
+
+// Escape string untuk JSON (minimal: backslash dan quote).
+jsonEsc(string s) =>
+    str.replace_all(str.replace_all(s, "\\", "\\\\"), "\"", "\\\"")
+
+// Bangun payload JSON. alert() TradingView mengirim string mentah;
+// bridge.py akan mem-parse sebagai JSON. Urutan field bebas.
+buildPayload(string action, float entry, float sl, float tp) =>
+    // ID stabil per bar + arah, supaya bridge bisa dedupe.
+    // Format: SYMBOL_TF_BARTIME_DIR  (karakter ":" diganti "_")
+    string sid = syminfo.tickerid + "_" + timeframe.period + "_" + str.tostring(time) + "_" + str.upper(action)
+    sid := str.replace_all(sid, ":", "_")
+    sid := str.replace_all(sid, "/", "_")
+    sid := str.replace_all(sid, " ", "_")
+
+    // Timestamp: gunakan timenow (detik) — TradingView mengirim saat alert,
+    // sehingga bridge melihat selisih hampir nol (aman untuk MAX_AGE_SECONDS).
+    int ts = math.floor(timenow / 1000)
+
+    '{"id":"' + jsonEsc(sid) + '"' +
+     ',"action":"' + action + '"' +
+     ',"symbol":"' + jsonEsc(symName) + '"' +
+     ',"time":' + str.tostring(ts) +
+     ',"price":' + fmtPrice(entry) +
+     ',"sl":' + fmtPrice(sl) +
+     ',"tp":' + fmtPrice(tp) + '}'
+
+// --------------------------- VALIDASI JARAK --------------------------------
+// Bridge akan menolak sinyal yang jarak SL/TP melebihi batas.
+// Di sini kita cegah alert dikirim agar tidak membanjiri log bridge.
+slOk(float entry, float sl) => math.abs(entry - sl) <= maxSlDist
+tpOk(float entry, float tp) => math.abs(tp - entry) <= maxTpDist
+
+// --------------------------- EMIT ALERT --------------------------------------
+if buySignal
+    entry = close
+    sl    = entry - atr * slAtr
+    tp    = entry + atr * tpAtr
+    if slOk(entry, sl) and tpOk(entry, tp)
+        alert(buildPayload("buy", entry, sl, tp), alert.freq_once_per_bar_close)
+
+if sellSignal
+    entry = close
+    sl    = entry + atr * slAtr
+    tp    = entry - atr * tpAtr
+    if slOk(entry, sl) and tpOk(entry, tp)
+        alert(buildPayload("sell", entry, sl, tp), alert.freq_once_per_bar_close)
+
+// --------------------------- PLOT --------------------------------------------
+plot(priorHigh, "Prior range high", color=color.new(color.green, 25), linewidth=1)
+plot(priorLow,  "Prior range low",  color=color.new(color.red,   25), linewidth=1)
+plot(useEmaFilter ? ema : na, "EMA", color=color.new(color.orange, 0), linewidth=1)
+plotshape(buySignal,  "BUY",  shape.triangleup,   location.belowbar, color.new(color.green, 0), size=size.small)
+plotshape(sellSignal, "SELL", shape.triangledown, location.abovebar, color.new(color.red,   0), size=size.small)
+
+// --------------------------- PANEL STATUS ------------------------------------
+var table panel = table.new(position.top_right, 2, 7, border_width=1,
+     bgcolor=color.new(color.black, 75), frame_color=color.new(color.gray, 50), frame_width=1)
+
+if showPanel and barstate.islast
+    string trendTxt = useEmaFilter ? (close > ema ? "UP" : "DOWN") : "OFF"
+    color  trendCol = useEmaFilter ? (close > ema ? color.lime : color.red) : color.gray
+    string sessTxt  = useSession ? (inSession ? "OPEN" : "CLOSED") : "OFF"
+    color  sessCol  = useSession ? (inSession ? color.lime : color.red) : color.gray
+    string volTxt   = useVolume ? (volume > volMa * volMult ? "OK" : "LOW") : "OFF"
+    string atrTxt   = str.tostring(atr, format.mintick)
+    string lastSig  = buySignal ? "BUY" : sellSignal ? "SELL" : "—"
+    color  lastCol  = buySignal ? color.lime : sellSignal ? color.red : color.gray
+
+    table.cell(panel, 0, 0, "BlackCube v2", text_color=color.white, text_size=size.small, bgcolor=color.new(color.blue, 60))
+    table.cell(panel, 1, 0, symName + " " + timeframe.period, text_color=color.white, text_size=size.small, bgcolor=color.new(color.blue, 60))
+    table.cell(panel, 0, 1, "Trend",  text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 1, trendTxt, text_color=trendCol,     text_size=size.small)
+    table.cell(panel, 0, 2, "Sesi",   text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 2, sessTxt,  text_color=sessCol,     text_size=size.small)
+    table.cell(panel, 0, 3, "Volume", text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 3, volTxt,   text_color=color.white, text_size=size.small)
+    table.cell(panel, 0, 4, "ATR",    text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 4, atrTxt,   text_color=color.white, text_size=size.small)
+    table.cell(panel, 0, 5, "Last",   text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 5, lastSig,  text_color=lastCol,     text_size=size.small)
+    table.cell(panel, 0, 6, "SL/TP cap", text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 6, str.tostring(maxSlDist) + "/" + str.tostring(maxTpDist), text_color=color.white, text_size=size.small)
