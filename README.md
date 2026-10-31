@@ -136,7 +136,24 @@ Jika proyek ini bermanfaat, dukung pengembangan Black Cube ScannerFX melalui don
 </p>
 
 ---
+## 🎓 Tujuan Proyek
 
+Project ini **edukasi** — untuk mempelajari:
+- Cara TradingView alert() mengirim JSON
+- Validasi webhook dengan secret + field + timestamp
+- File queue pattern (producer-consumer)
+- MQL5 EA: hitung lot, validasi SL/TP, eksekusi order
+- Safety layer: dedupe, reject, retcode classifier
+- Packaging Python jadi single .exe
+
+**BUKAN** untuk trading live produksi. Lihat bagian "Batasan" di bawah.
+
+## ⚠️ Keterbatasan untuk Edukasi
+
+- Webhook `http://127.0.0.1` **hanya bisa diakses lokal** — untuk TradingView butuh **HTTPS** (Cloudflare Tunnel / VPS)
+- Untuk **demo lokal**, kirim payload via `Invoke-RestMethod` (simulasi TradingView)
+- TradingView **webhook** butuh akun **Premium** (Pro/Pro+)
+- **Bukan nasihat finansial** — gunakan akun **DEMO** saja
 ## 📞 Kontak Developer
 
 **BLACK CUBE CODE**
