@@ -48,3 +48,9 @@ processed_ids/
 *.pem
 *.key
 secret*
+# Auto-added by sync script
+*.exe
+*.zip
+release/
+bridge/build/
+bridge/dist/
